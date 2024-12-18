@@ -4,11 +4,6 @@ import time
 import subprocess
 import threading
 
-# Semaphore to prevent `left.py` and `right.py` from running simultaneously
-from threading import Semaphore
-
-semaphore = Semaphore(1)
-
 def play_intro_video():
     """Play the intro video using VLC."""
     video_url = "http://your-cdn.com/intro.mp4"
@@ -30,31 +25,33 @@ def launch_chromium():
     url = "http://robotum.vercel.app"
     os.system(f"chromium-browser --noerrdialogs --disable-infobars --kiosk {url}")
 
-def run_left():
-    """Run left.py while ensuring no conflicts with right.py."""
-    with semaphore:  # Acquire the semaphore
+def run_left_and_right_alternately():
+    """Run left.py and right.py alternately with a delay in between."""
+    while True:
+        # Run left.py
         print("Running left.py...")
         subprocess.run(["python3", "left.py"])
         print("Finished running left.py.")
+        time.sleep(2)  # Sleep before switching to right.py
 
-def run_right():
-    """Run right.py while ensuring no conflicts with left.py."""
-    with semaphore:  # Acquire the semaphore
+        # Run right.py
         print("Running right.py...")
         subprocess.run(["python3", "right.py"])
         print("Finished running right.py.")
+        time.sleep(2)  # Sleep before switching back to left.py
 
-def run_left_and_right_in_sequence():
-    """Run left.py and right.py alternately in sequence."""
-    while True:
-        run_left()
-        time.sleep(2)  # Delay between runs
-        run_right()
-        time.sleep(2)  # Delay between runs
+def run_listening():
+    """Run listening.py continuously in a subprocess."""
+    print("Starting listening.py...")
+    subprocess.run(["python3", "listening.py"])
+    print("listening.py has stopped.")
 
 if __name__ == "__main__":
     # Thread for running left.py and right.py alternately
-    threading.Thread(target=run_left_and_right_in_sequence, daemon=True).start()
+    threading.Thread(target=run_left_and_right_alternately, daemon=True).start()
+
+    # Thread to keep listening.py running in the background
+    threading.Thread(target=run_listening, daemon=True).start()
 
     # Play the intro video
     play_intro_video()
