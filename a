@@ -1,0 +1,12 @@
+import os
+import time
+
+def launch_chromium():
+    url = "http://robotum.vercel.app"
+    # Delay to ensure the system is ready (optional)
+    time.sleep(5)
+    # Launch Chromium in kiosk mode
+    os.system(f"chromium-browser --noerrdialogs --disable-infobars --kiosk {url}")
+
+if __name__ == "__main__":
+    launch_chromium()
