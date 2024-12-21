@@ -1,6 +1,7 @@
 import subprocess
 import threading
 import time
+import random
 import vlc
 from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -15,8 +16,9 @@ def execute_script(script_name):
 # State-action mapping
 STATE_ACTIONS = {
     "[DAKAEI][STATE] disconnected": ["left.py", "right.py"],
-    "[DAKAEI][STATE] speaking": ["speaking.py"],
-    "[DAKAEI][STATE] listening": ["listening.py"]
+    "[DAKAEI][STATE] speaking": ["left.py", "right.py"],  # Random choice for speaking
+    "[DAKAEI][STATE] listening": ["listening.py"],
+    "[DAKAEI][STATE] thinking": ["listening.py"]  # Replace thinking.py with led.py
 }
 
 def play_intro_video():
@@ -86,7 +88,12 @@ def monitor_console_logs():
                 for state, actions in STATE_ACTIONS.items():
                     if state in message:
                         print(f"Detected state: {state}")
-                        if state not in active_threads or not active_threads[state].is_alive():
+                        if state == "[DAKAEI][STATE] speaking":
+                            # Randomly choose between left.py and right.py
+                            chosen_action = random.choice(actions)
+                            print(f"Randomly chosen action for speaking: {chosen_action}")
+                            execute_script(chosen_action)
+                        elif state not in active_threads or not active_threads[state].is_alive():
                             # Launch a thread for each action
                             def run_actions():
                                 for action in actions:
