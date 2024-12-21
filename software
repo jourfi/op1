@@ -1,6 +1,7 @@
 import subprocess
 import threading
 import time
+import vlc
 from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
@@ -18,7 +19,25 @@ STATE_ACTIONS = {
     "[DAKAEI][STATE] listening": ["listening.py"]
 }
 
-# Function to launch Chromium and monitor console logs
+def play_intro_video():
+    """Play the intro video using VLC."""
+    video_url = "intro.mp4"  # Ensure the path to intro.mp4 is correct
+    print("Playing intro video...")
+    player = vlc.MediaPlayer(video_url)
+    player.set_fullscreen(True)
+    player.play()
+
+    # Wait until the video finishes playing
+    while True:
+        state = player.get_state()
+        if state in (vlc.State.Ended, vlc.State.Stopped):
+            break
+        time.sleep(1)
+
+    player.stop()
+    player.release()
+    print("Intro video finished.")
+
 def monitor_console_logs():
     """Monitor Chromium console logs and execute actions based on states."""
     url = "http://robotum.vercel.app"
@@ -35,6 +54,9 @@ def monitor_console_logs():
     options.add_argument("--noerrdialogs")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--use-fake-ui-for-media-stream")  # Allow mic access
+    options.add_argument("--use-fake-device-for-media-stream")  # Optional for testing
+    options.add_argument("--enable-blink-features=WebRTCPeerConnection")
 
     # Path to the Chromium WebDriver
     driver_path = "/usr/bin/chromedriver"
@@ -71,5 +93,8 @@ def monitor_console_logs():
         driver.quit()
 
 if __name__ == "__main__":
+    # Play the intro video
+    play_intro_video()
+
     # Monitor console logs and handle states
     monitor_console_logs()
