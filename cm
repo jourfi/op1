@@ -29,8 +29,9 @@ while True:
     # Detect faces in the frame
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-    # Draw rectangles around the detected faces and print their coordinates
-    for (x, y, w, h) in faces:
+    # Only process the first detected face
+    if len(faces) > 0:
+        (x, y, w, h) = faces[0]
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
         print(f"Face detected at: x={x}, y={y}, width={w}, height={h}")
 
