@@ -1,8 +1,10 @@
 import cv2
 import time
+import subprocess
+from collections import Counter
 
 # Load the pre-trained Haar cascade for face detection
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
 # Initialize the webcam (default camera index is 0)
 cap = cv2.VideoCapture(0)
@@ -11,10 +13,11 @@ if not cap.isOpened():
     print("Error: Could not open webcam.")
     exit()
 
-print("Press 'q' to exit.")
+print("Tracking face position for 5 seconds...")
 
-# Start the timer
+# Start the timer and initialize variables
 start_time = time.time()
+positions = []
 
 while True:
     # Capture frame-by-frame
@@ -43,11 +46,11 @@ while True:
         face_center_x = x + w // 2
 
         if face_center_x < frame_center_x - 50:
-            print("Face is on the left")
+            positions.append("left")
         elif face_center_x > frame_center_x + 50:
-            print("Face is on the right")
+            positions.append("right")
         else:
-            print("Face is in the center")
+            positions.append("center")
 
     # Display the resulting frame
     cv2.imshow('Webcam Face Tracking', frame)
@@ -59,3 +62,16 @@ while True:
 # Release the webcam and close all OpenCV windows
 cap.release()
 cv2.destroyAllWindows()
+
+# Determine the most frequent position
+if positions:
+    most_common = Counter(positions).most_common(1)[0][0]
+    print(f"Most frequent position: {most_common}")
+
+    # Execute corresponding script
+    if most_common == "left":
+        subprocess.run(["python3", "left.py"])
+    elif most_common == "right":
+        subprocess.run(["python3", "right.py"])
+else:
+    print("No face detected during the 5 seconds.")
