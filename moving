@@ -1,111 +1,61 @@
 import cv2
-from gpiozero import OutputDevice
 import time
 
 # Load the pre-trained Haar cascade for face detection
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# Define GPIO pins for ULN2003 driver
-IN1 = 14
-IN2 = 15
-IN3 = 18
-IN4 = 23
-
-# Create OutputDevice instances for each pin
-in1 = OutputDevice(IN1)
-in2 = OutputDevice(IN2)
-in3 = OutputDevice(IN3)
-in4 = OutputDevice(IN4)
-
-# Define sequence for 28BYJ-48 stepper motor
-seq = [
-    [1, 0, 0, 1],
-    [1, 0, 0, 0],
-    [1, 1, 0, 0],
-    [0, 1, 0, 0],
-    [0, 1, 1, 0],
-    [0, 0, 1, 0],
-    [0, 0, 1, 1],
-    [0, 0, 0, 1]
-]
-
-# Function to rotate the stepper motor one step
-def step(delay, step_sequence):
-    in1.value = step_sequence[0]
-    in2.value = step_sequence[1]
-    in3.value = step_sequence[2]
-    in4.value = step_sequence[3]
-    time.sleep(delay)
-
-# Function to move the stepper motor forward
-def step_forward(delay, steps):
-    for _ in range(steps):
-        for s in seq:
-            step(delay, s)
-
-# Function to move the stepper motor backward
-def step_backward(delay, steps):
-    for _ in range(steps):
-        for s in reversed(seq):
-            step(delay, s)
-
-# Initialize the webcam
+# Initialize the webcam (default camera index is 0)
 cap = cv2.VideoCapture(0)
+
 if not cap.isOpened():
     print("Error: Could not open webcam.")
     exit()
 
-print("Aligning face to center. Press 'q' to exit.")
+print("Press 'q' to exit.")
 
-try:
-    while True:
-        # Capture frame-by-frame
-        ret, frame = cap.read()
-        if not ret:
-            print("Error: Failed to capture frame.")
-            break
+# Start the timer
+start_time = time.time()
 
-        # Resize the frame to fit smaller screens
-        frame = cv2.resize(frame, (640, 480))
-        height, width = frame.shape[:2]
-        center_x, center_y = width // 2, height // 2
+while True:
+    # Capture frame-by-frame
+    ret, frame = cap.read()
 
-        # Convert the frame to grayscale
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if not ret:
+        print("Error: Failed to capture frame.")
+        break
 
-        # Detect faces in the frame
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    # Resize the frame to fit smaller screens
+    frame = cv2.resize(frame, (640, 480))
 
-        if len(faces) > 0:
-            (x, y, w, h) = faces[0]
-            face_center_x = x + w // 2
+    # Convert the frame to grayscale (Haar cascades work with grayscale images)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            print(f"Face detected at: x={x}, y={y}, width={w}, height={h}")
-            print(f"Face center: {face_center_x}, Frame center: {center_x}")
+    # Detect faces in the frame
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-            # Move the stepper motor if the face is not centered
-            if face_center_x < center_x - 20:  # Face is to the left
-                print("Moving stepper motor left...")
-                step_forward(0.002, 50)  # Adjust delay and steps as needed
+    # Only process the first detected face
+    if len(faces) > 0:
+        (x, y, w, h) = faces[0]
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-            elif face_center_x > center_x + 20:  # Face is to the right
-                print("Moving stepper motor right...")
-                step_backward(0.002, 50)  # Adjust delay and steps as needed
+        # Determine the position of the face relative to the center
+        frame_center_x = frame.shape[1] // 2
+        face_center_x = x + w // 2
 
-            # Break after one adjustment
-            break
+        if face_center_x < frame_center_x - 50:
+            print("Face is on the left")
+        elif face_center_x > frame_center_x + 50:
+            print("Face is on the right")
+        else:
+            print("Face is in the center")
 
-        # Display the frame
-        cv2.imshow('Webcam Face Tracking', frame)
+    # Display the resulting frame
+    cv2.imshow('Webcam Face Tracking', frame)
 
-        # Exit on 'q'
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+    # Break the loop if 'q' is pressed or after 5 seconds
+    if cv2.waitKey(1) & 0xFF == ord('q') or (time.time() - start_time > 5):
+        break
 
-finally:
-    cap.release()
-    cv2.destroyAllWindows()
-    in1.close()
-    in2.close()
-    in3.close()
-    in4.close()
+# Release the webcam and close all OpenCV windows
+cap.release()
+cv2.destroyAllWindows()
